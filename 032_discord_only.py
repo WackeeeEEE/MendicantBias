@@ -11,6 +11,7 @@ from discord.ext.commands import Bot
 import csv
 import sys
 import datetime
+from datetime import datetime
 import time
 import math
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -235,24 +236,56 @@ async def purgeNotStreams(streams):
 			else:
 				await messageObject.delete()
 
-async def getPoints(pb, wr):
-	### Returns the description field for the ".points" command
-	### FIX: make this work either way, and with hours
+def getTimeFormat(s):
+    count = s.count(':')
+    if count == 0:
+        return "%S"
+    if count == 1:
+        return "%M:%S"
+    if count == 2:
+        return "%H:%M:%S"
 
-	print("checking points", pb, wr)
-	pb_split = pb.split(":")
-	pb_mins = int(pb_split[0])
-	pb_secs = int(pb_split[1])
-	pb_comb = pb_secs + 60 * pb_mins
-	wr_split = wr.split(":")
-	wr_mins = int(wr_split[0])
-	wr_secs = int(wr_split[1])
-	wr_comb = wr_secs + 60 * wr_mins
-	points = round((0.008 * math.exp(4.8284*(wr_comb/pb_comb)) * 100), 1)
-	print(points)
-	help_string = "Use like this: .points [pb]mm:ss [wr]mm:ss .\nIf you are comparing a full game, fit hours to minutes please.\n"
-	print(str("Your PB of " + pb + " against "  + wr + " is worth " + str(points) + " points"))
-	return(str(help_string + "Your PB of " + pb + " against "  + wr + " is worth " + str(points) + " points"))
+# Pads time strings to fit the format 00:00:00
+def padTime(s):
+    out = ""
+    x = s.split(':')
+    for t in x[:-1]:
+        out += t.zfill(2) + ':'
+    out += x[-1].zfill(2)
+    return out
+
+async def getPoints(pb, wr):
+    pointsStr = ""
+    help_string = "Use like this: .points hh:mm:ss hh:mm:ss .\n"
+    try:
+    	print("checking points", pb, wr)
+    	pb = pb.replace('.', ':')
+    	wr = wr.replace('.', ':')
+    	
+    	pb = padTime(pb)
+    	wr = padTime(wr)
+    	
+    	pbFormat = getTimeFormat(pb)
+    	wrFormat = getTimeFormat(wr)
+    	
+    	print(f"{pb} {pbFormat}")
+    	print(f"{wr} {wrFormat}")
+    	
+    	pbTime = datetime.strptime(pb, pbFormat) - datetime.strptime("0", "%S")
+    	wrTime = datetime.strptime(wr, wrFormat) - datetime.strptime("0", "%S")
+    	
+    	if(wrTime > pbTime):
+    	    pbTime, wrTime = wrTime, pbTime # swap so PB is always larger
+    	
+    	pointsExact = 0.008 * math.exp(4.8284*(wrTime.seconds/pbTime.seconds)) * 100
+    	print(pointsExact)
+    	pointsStr = f"Your PB of {pbTime} against {wrTime} is worth {int(pointsExact)} points"
+    	print(pointsStr)
+    except Exception as e:
+        print(e)
+        pointsStr = "One of your times is probably not formatted correctly."
+    finally:
+	    return(help_string + pointsStr)
 
 async def lookForRecord():
 	### Upon a new record being added to the HR database, this catches it by checking the API against the locally stored records
