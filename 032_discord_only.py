@@ -278,6 +278,11 @@ async def getPoints(pb, wr):
     	    pbTime, wrTime = wrTime, pbTime # swap so PB is always larger
     	
     	pointsExact = 0.008 * math.exp(4.8284*(wrTime.seconds/pbTime.seconds)) * 100
+	
+	# If more than 30 minutes, this is probably a fullgame time
+    	if(wrTime.seconds > 30 * 60):
+    	    pointsExact *= 10 
+	
     	print(pointsExact)
     	pointsStr = f"Your PB of {pbTime} against {wrTime} is worth {int(pointsExact)} points"
     	print(pointsStr)
