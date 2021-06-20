@@ -201,7 +201,7 @@ async def getPostedStreams():
 def saveStreamsToFile(postedStreamList, filename):
         with open(filename, "a+") as file:
                 for stream in postedStreamList:
-                        file.append(stream + "\n")
+                        file.write(stream + "\n")
                 file.truncate()
 
 
@@ -234,15 +234,24 @@ async def maintainTwitchNotifs():
                                 if stream["StreamUrl"].lower() not in postedStreamList:
                                         if stream["StreamUrl"].lower() not in temps.keys():
                                                 print(f"{stream['StreamUrl'].lower()} not in: {postedStreamList}")
-                                                responses.append(stream["StreamUrl"].lower())
+                                                ### TODO: get twitch user color and set in embed
+                                                embed = discord.Embed(title=f"Streaming {stream['GameName']}", description=f"\"{stream['Title']}\"", color=0x080808)
+                                                ### TODO: set icon_url as discord avatar?
+                                                embed.set_author(name=f"{stream['Username']}", url=f"https://haloruns.com/profiles/{stream['Username'].lower()}")
+                                                ### TODO: Get Game Name from site when we get functionality to detect game.
+                                                embed.add_field(name="\u200b", value=f"[Watch Here]({stream['StreamUrl'].lower()})", inline=True)
+                                                embed.set_footer(text=f"{stream['Viewers']} Viewers | {stream['StreamUrl'].lower()}")
+                                                ### Not sure if we want viewer count, but its here if we do.
+                                                # embed.set_thumbnail(url=f"{stream['TwitchAvatar']}")
+                                                responses.append(embed)
                         streamsChannel = mb.get_channel(NOTIFS_CHANNEL_ID)
 
                         if responses != []:
                                 for response in responses:
-                                                await streamsChannel.send(response)
+                                                await streamsChannel.send(embed=response)
 
                 postedStreamList = await getPostedStreams() # Get updated channel feed
-                saveStreamsToFile(postedStreamList, "streamlist.txt")
+               saveStreamsToFile(postedStreamList, "streamlist.txt")
                # await purgeOldStreams(postedStreamList) folding into main maintenance
 
 def getTimeFormat(s):
